@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34525.116
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GPUHash", "GPUHash\GPUHash.csproj", "{EF9C4A60-991E-4025-8226-99B10FCA2DC9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EF9C4A60-991E-4025-8226-99B10FCA2DC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF9C4A60-991E-4025-8226-99B10FCA2DC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF9C4A60-991E-4025-8226-99B10FCA2DC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF9C4A60-991E-4025-8226-99B10FCA2DC9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E09925F2-9974-4A46-9A74-633D67E0D418}
+	EndGlobalSection
+EndGlobal
