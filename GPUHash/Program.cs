@@ -90,11 +90,19 @@ public struct Sha256
         state[7] = 0x5be0cd19;
     }
 
-    public void Update(ArrayView<byte> payload, ArrayView<uint> k)
+    public void Update(int nonce, ArrayView<byte> payload, ArrayView<uint> k)
     {
+        byte p3 = (byte)(nonce >> 24);
+        byte p2 = (byte)(nonce >> 16);
+        byte p1 = (byte)(nonce >> 8);
+        byte p0 = (byte)nonce;
         for (long i = 0; i < payload.Length; ++i)
         {
-            data[dataLen] = payload[i];
+            if (i == 3) data[dataLen] = p3;
+            else if (i == 2) data[dataLen] = p2;
+            else if (i == 1) data[dataLen] = p1;
+            else if (i == 0) data[dataLen] = p0;
+            else data[dataLen] = payload[i];
             dataLen++;
             if (dataLen == 64)
             {
@@ -150,12 +158,44 @@ public struct Sha256
         }
     }
 
-    static void HashData(Index2D index, ArrayView<uint> k, ArrayView<byte> data, ArrayView<byte> outdata)
+    static int HexLeadingZeros(ArrayView<byte> arrayData)
     {
-        var _nonce = index.X * index.Y;
+        int zeroCount = 0;
+        for (int i = 0; i < arrayData.Length; i++)
+        {
+            byte b = arrayData[i];
+            if (b == 0)
+            {
+                zeroCount += 2;
+            }
+            else
+            {
+                if ((b & 0xF0) == 0)
+                {
+                    zeroCount++;
+                }
+                break;
+            }
+        }
+        return zeroCount;
+    }
+
+    static void Mine(Index1D nonce, ArrayView<uint> k, ArrayView<byte> inData, ArrayView<byte> outData, ArrayView<int> maxHexLeadingZeros, ArrayView<byte> outDataWithMaxHexLeadingZeros)
+    {
         var ctx = new Sha256();
-        ctx.Update(data, k);
-        ctx.Final(outdata, k);
+        ctx.Update(nonce, inData, k);
+        ArrayView<byte> outdataSub = outData.SubView(nonce * 32, 32);
+        ctx.Final(outdataSub, k);
+        int hexLeadingZeros = HexLeadingZeros(outdataSub);
+        if (hexLeadingZeros > maxHexLeadingZeros[0])
+        {
+            maxHexLeadingZeros[0] = hexLeadingZeros;
+            maxHexLeadingZeros[1] = nonce;
+            for (int i = 0; i < outdataSub.Length; i++)
+            {
+                outDataWithMaxHexLeadingZeros[i] = outdataSub[i];
+            }
+        }
     }
 
     public static void Main(string[] args)
@@ -164,17 +204,25 @@ public struct Sha256
         var device = context.GetPreferredDevice(preferCPU: false);
         Console.WriteLine(device);
         using var accelerator = device.CreateAccelerator(context);
-        var loadKernel = accelerator.LoadAutoGroupedStreamKernel<Index2D, ArrayView<uint>, ArrayView<byte>, ArrayView<byte>>(HashData);
+        var loadKernel = accelerator.LoadAutoGroupedStreamKernel<Index1D, ArrayView<uint>, ArrayView<byte>, ArrayView<byte>, ArrayView<int>, ArrayView<byte>>(Mine);
 
-        var hX = "Lê Võ Thanh Hồng"u8.ToArray();
+        var dIndex = 100_000_000;
+
+        var hInput = "Lê Võ Thanh Hồng"u8.ToArray();
+        //return;
         using var dK = accelerator.Allocate1D(K);
-        using var dInput = accelerator.Allocate1D(hX);
-        using var dOutput = accelerator.Allocate1D<byte>(32);
+        using var dInput = accelerator.Allocate1D(hInput);
+        using var dOutput = accelerator.Allocate1D<byte>(32L * dIndex);
+        using var dMaxHexLeadingZeros = accelerator.Allocate1D([-1, 0]);
+        using var dOutDataWithMaxHexLeadingZeros = accelerator.Allocate1D<byte>(32);
 
-        loadKernel(new Index2D(1_000_000, 5), dK.View, dInput.View, dOutput.View);
+        loadKernel(dIndex, dK.View, dInput.View, dOutput.View, dMaxHexLeadingZeros.View, dOutDataWithMaxHexLeadingZeros.View);
 
         var hY = dOutput.GetAsArray1D();
-        Console.WriteLine(Convert.ToHexString(hY));
-        Console.WriteLine(Convert.ToHexString(SHA256.HashData("Lê Võ Thanh Hồng"u8.ToArray())));
+        var hH = dMaxHexLeadingZeros.GetAsArray1D();
+        var hHX = dOutDataWithMaxHexLeadingZeros.GetAsArray1D();
+
+        Console.WriteLine($"{hH[0]} - {hH[1]} - {Convert.ToHexString(hHX)}");
+        //Console.WriteLine(Convert.ToHexString(SHA256.HashData("Lê Võ Thanh Hồng"u8.ToArray())));
     }
 }
